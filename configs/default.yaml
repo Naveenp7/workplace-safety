@@ -1,0 +1,20 @@
+detection:
+  model: yolov8n.pt
+  confidence: 0.5
+  iou: 0.45
+  input_size: 640
+  device: auto
+video:
+  fps_limit: 30
+  frame_skip: 0
+  max_upload_mb: 500
+safety:
+  ppe_confidence: 0.45
+  obstacle_persistence_frames: 10
+  obstacle_zone_overlap: 0.3
+  event_cooldown_seconds: 30
+  classes:
+    workers: [person]
+    helmets: [helmet]
+    vests: [safety-vest]
+    obstacles: [backpack, suitcase, chair, bench, box, bottle, potted plant, dining table]
