@@ -24,11 +24,19 @@ export interface ObstacleWarning {
   frames_persisted: number;
 }
 
+export interface FaceRecognitionResult {
+  name: string;
+  confidence: number;
+  bbox: number[]; // [x1, y1, x2, y2]
+  face_crop_b64: string;
+}
+
 export interface DetectionFrame {
   frame_base64: string;
   detections: Detection[];
   ppe_statuses: WorkerPPEStatus[];
   obstacle_warnings: ObstacleWarning[];
+  face_recognitions?: FaceRecognitionResult[];
   fps: number;
   latency_ms: number;
   worker_count: number;

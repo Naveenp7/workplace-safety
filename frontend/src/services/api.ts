@@ -85,4 +85,38 @@ export const api = {
     }),
 
   getSystemStatus: () => fetchJSON<SystemStatus>('/settings/system-status'),
+
+  // Face Recognition
+  getFaces: () => fetchJSON<any[]>('/faces'),
+
+  getFaceStatus: () => fetchJSON<any>('/faces/status'),
+
+  addPerson: async (name: string, imageFiles: File[]) => {
+    const formData = new FormData();
+    formData.append('name', name);
+    imageFiles.forEach((file) => formData.append('images', file));
+    const response = await fetch(`${API_BASE}/faces`, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: 'Upload failed' }));
+      throw new Error(err?.detail?.message || err?.detail || 'Failed to add person');
+    }
+    return response.json();
+  },
+
+  addImagesToPerson: async (personId: string, imageFiles: File[]) => {
+    const formData = new FormData();
+    imageFiles.forEach((file) => formData.append('images', file));
+    const response = await fetch(`${API_BASE}/faces/${personId}/images`, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!response.ok) throw new Error('Failed to add images');
+    return response.json();
+  },
+
+  deletePerson: (personId: string) =>
+    fetchJSON(`/faces/${personId}`, { method: 'DELETE' }),
 };

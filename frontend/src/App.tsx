@@ -8,6 +8,7 @@ import EventsPage from './pages/EventsPage';
 import CamerasPage from './pages/CamerasPage';
 import ZonesPage from './pages/ZonesPage';
 import SettingsPage from './pages/SettingsPage';
+import FaceRegistrationPage from './pages/FaceRegistrationPage';
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
           <Route path="/events" element={<EventsPage />} />
           <Route path="/cameras" element={<CamerasPage />} />
           <Route path="/zones" element={<ZonesPage />} />
+          <Route path="/faces" element={<FaceRegistrationPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
       </Routes>

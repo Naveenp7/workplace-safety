@@ -13,11 +13,13 @@ from app.core.logging import setup_logging
 from app.database.init_db import init_db
 from app.database.session import AsyncSessionLocal
 from app.detection.engine import DetectionEngine
+from app.detection.face_recognizer import FaceRecognizer
 from app.services.detection_service import DetectionService
 from app.services.event_service import EventService
 from app.api.websocket import ConnectionManager
 
 from app.api.routes import health, video, detection, events, zones, cameras, settings as settings_routes
+from app.api.routes import faces as faces_routes
 
 setup_logging(settings.LOG_LEVEL)
 logger = logging.getLogger(__name__)
@@ -25,6 +27,7 @@ logger = logging.getLogger(__name__)
 # Global instances
 ws_manager = ConnectionManager(max_connections=settings.WS_MAX_CONNECTIONS)
 event_service = EventService()
+face_recognizer = FaceRecognizer()
 engine = DetectionEngine(
     model_path=settings.MODEL_PATH,
     device=settings.MODEL_DEVICE,
@@ -51,10 +54,12 @@ async def lifespan(app: FastAPI):
     detection_service.inject_dependencies(
         event_service=event_service,
         ws_manager=ws_manager,
-        db_session_maker=AsyncSessionLocal
+        db_session_maker=AsyncSessionLocal,
+        face_recognizer=face_recognizer
     )
     
     app.state.detection_service = detection_service
+    app.state.face_recognizer = face_recognizer
     
     yield
     
@@ -88,6 +93,7 @@ app.include_router(events.router, prefix="/api")
 app.include_router(zones.router, prefix="/api")
 app.include_router(cameras.router, prefix="/api")
 app.include_router(settings_routes.router, prefix="/api")
+app.include_router(faces_routes.router, prefix="/api")
 
 @app.websocket("/ws/detection")
 async def websocket_endpoint(websocket: WebSocket):

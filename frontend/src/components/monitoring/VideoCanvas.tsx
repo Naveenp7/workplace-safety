@@ -152,6 +152,63 @@ export function VideoCanvas({ frame, isActive = true }: VideoCanvasProps) {
           ctx.setLineDash([]);
         });
       }
+
+      // 4. Draw Face Recognitions (purple/violet boxes)
+      if (Array.isArray(frame.face_recognitions)) {
+        frame.face_recognitions.forEach((face) => {
+          if (!face || !face.bbox) return;
+          const rect = toCanvas(face.bbox);
+          const confPct = Math.round((face.confidence || 0) * 100);
+          const label = face.name === 'Unknown'
+            ? 'Unknown'
+            : `${face.name} (${confPct}%)`;
+
+          const VIOLET = '#7c3aed';
+
+          // Draw violet bounding box
+          ctx.strokeStyle = VIOLET;
+          ctx.lineWidth = 2.5;
+          ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
+
+          // Filled label bar at top of box
+          ctx.font = 'bold 11px Inter, system-ui, sans-serif';
+          const textWidth = ctx.measureText(label).width;
+          const labelHeight = 18;
+          const labelY = rect.y - labelHeight;
+
+          ctx.fillStyle = VIOLET;
+          ctx.beginPath();
+          ctx.roundRect(rect.x, Math.max(labelY, 0), textWidth + 10, labelHeight, [3, 3, 0, 0]);
+          ctx.fill();
+
+          ctx.fillStyle = '#ffffff';
+          ctx.fillText(label, rect.x + 5, Math.max(labelY, 0) + 13);
+
+          // Draw face crop thumbnail if available (48x48 in top-right corner of box)
+          if (face.face_crop_b64) {
+            const thumbSize = 48;
+            const thumbImg = new Image();
+            thumbImg.onload = () => {
+              ctx.save();
+              // Rounded clip for thumbnail
+              const tx = rect.x + rect.w - thumbSize - 4;
+              const ty = rect.y + 4;
+              ctx.beginPath();
+              ctx.roundRect(tx, ty, thumbSize, thumbSize, 4);
+              ctx.clip();
+              ctx.drawImage(thumbImg, tx, ty, thumbSize, thumbSize);
+              ctx.restore();
+              // Violet border around thumbnail
+              ctx.strokeStyle = VIOLET;
+              ctx.lineWidth = 1.5;
+              ctx.beginPath();
+              ctx.roundRect(tx, ty, thumbSize, thumbSize, 4);
+              ctx.stroke();
+            };
+            thumbImg.src = `data:image/jpeg;base64,${face.face_crop_b64}`;
+          }
+        });
+      }
     };
 
     img.src = `data:image/jpeg;base64,${frame.frame_base64}`;

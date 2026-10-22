@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, MonitorPlay, AlertTriangle, Camera, Shield, Settings, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, MonitorPlay, AlertTriangle, Camera, Shield, Users, Settings, ShieldCheck } from 'lucide-react';
 import clsx from 'clsx';
 import { useApi } from '../../hooks/useApi';
 import { api } from '../../services/api';
@@ -11,6 +11,7 @@ const navItems = [
   { to: '/events', label: 'Events', icon: AlertTriangle },
   { to: '/cameras', label: 'Cameras', icon: Camera },
   { to: '/zones', label: 'Safety Zones', icon: Shield },
+  { to: '/faces', label: 'Face Recognition', icon: Users },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
 

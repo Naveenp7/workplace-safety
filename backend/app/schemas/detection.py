@@ -26,11 +26,18 @@ class ObstacleWarning(BaseModel):
     zone_name: str
     frames_persisted: int
 
+class FaceRecognitionResult(BaseModel):
+    name: str
+    confidence: float
+    bbox: List[float]  # [x1, y1, x2, y2]
+    face_crop_b64: str = ""
+
 class DetectionFrame(BaseModel):
     frame_base64: str
     detections: List[DetectionResult]
     ppe_statuses: List[WorkerPPEStatus]
     obstacle_warnings: List[ObstacleWarning]
+    face_recognitions: List[FaceRecognitionResult] = []
     fps: float
     latency_ms: float
     worker_count: int

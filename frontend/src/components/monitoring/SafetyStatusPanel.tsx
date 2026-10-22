@@ -1,7 +1,7 @@
 import React from 'react';
 import { DetectionFrame } from '../../types';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
-import { HardHat, AlertTriangle } from 'lucide-react';
+import { HardHat, AlertTriangle, Users } from 'lucide-react';
 import { StatusBadge } from '../ui/StatusBadge';
 
 export function SafetyStatusPanel({ frame }: { frame: DetectionFrame | null }) {
@@ -16,6 +16,7 @@ export function SafetyStatusPanel({ frame }: { frame: DetectionFrame | null }) {
 
   const ppeStatuses = Array.isArray(frame.ppe_statuses) ? frame.ppe_statuses : [];
   const obstacleWarnings = Array.isArray(frame.obstacle_warnings) ? frame.obstacle_warnings : [];
+  const faceRecognitions = Array.isArray(frame.face_recognitions) ? frame.face_recognitions : [];
 
   const compliantWorkers = ppeStatuses.filter(w => w.compliance_status === 'compliant').length;
   const totalWorkers = frame.worker_count ?? ppeStatuses.length;
@@ -74,6 +75,43 @@ export function SafetyStatusPanel({ frame }: { frame: DetectionFrame | null }) {
             ))}
             {obstacleWarnings.length === 0 && (
               <p className="text-sm text-slate-500">No hazards detected.</p>
+            )}
+          </div>
+        </div>
+
+        {/* Face Recognition Section */}
+        <div className="pt-4 border-t border-slate-100">
+          <h4 className="text-sm font-semibold text-slate-700 flex items-center mb-4">
+            <Users className="w-4 h-4 mr-2 text-violet-500" />
+            Face Recognition
+          </h4>
+          <div className="space-y-3">
+            {faceRecognitions.filter(f => f.name !== 'Unknown').map((face, idx) => (
+              <div key={idx} className="p-3 bg-violet-50 rounded-lg border border-violet-100 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {face.face_crop_b64 && (
+                    <img
+                      src={`data:image/jpeg;base64,${face.face_crop_b64}`}
+                      alt={face.name}
+                      className="w-9 h-9 rounded-full object-cover border-2 border-violet-300"
+                    />
+                  )}
+                  <span className="text-sm font-medium text-violet-900">{face.name}</span>
+                </div>
+                <span className="text-xs font-semibold bg-violet-600 text-white px-2 py-0.5 rounded-full">
+                  {Math.round(face.confidence * 100)}%
+                </span>
+              </div>
+            ))}
+            {faceRecognitions.filter(f => f.name === 'Unknown').length > 0 && (
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                <p className="text-sm text-slate-500">
+                  {faceRecognitions.filter(f => f.name === 'Unknown').length} unknown face(s) detected
+                </p>
+              </div>
+            )}
+            {faceRecognitions.length === 0 && (
+              <p className="text-sm text-slate-500">No faces recognized.</p>
             )}
           </div>
         </div>

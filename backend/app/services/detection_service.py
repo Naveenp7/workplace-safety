@@ -11,7 +11,7 @@ from app.detection.obstacle_analyzer import ObstacleAnalyzer
 from app.detection.tracker import DetectionTracker
 from app.video.processor import VideoProcessor
 from app.video.utils import encode_frame_to_base64, draw_detections
-from app.schemas.detection import DetectionStatus, DetectionFrame
+from app.schemas.detection import DetectionStatus, DetectionFrame, FaceRecognitionResult
 
 logger = logging.getLogger(__name__)
 
@@ -43,11 +43,13 @@ class DetectionService:
         self.event_service = None
         self.ws_manager = None
         self.db_session_maker = None
+        self.face_recognizer = None
 
-    def inject_dependencies(self, event_service, ws_manager, db_session_maker):
+    def inject_dependencies(self, event_service, ws_manager, db_session_maker, face_recognizer=None):
         self.event_service = event_service
         self.ws_manager = ws_manager
         self.db_session_maker = db_session_maker
+        self.face_recognizer = face_recognizer
 
     async def start_detection(self, source: str | int, camera_id: int | None, zones: List) -> None:
         if self.processor and self.processor.is_running:
@@ -125,8 +127,18 @@ class DetectionService:
                 if self.event_service and self.db_session_maker:
                     asyncio.create_task(self._generate_events(ppe_statuses, persistent_warnings, frame))
                 
+                # Face Recognition
+                face_recognitions_raw = []
+                if self.face_recognizer and self.face_recognizer.is_trained:
+                    face_recognitions_raw = self.face_recognizer.recognize_faces(frame)
+
+                # Convert raw face dicts to schema objects
+                face_recognitions = [
+                    FaceRecognitionResult(**fr) for fr in face_recognitions_raw
+                ]
+
                 # Annotate Frame
-                annotated_frame = draw_detections(frame, detections, ppe_statuses, persistent_warnings, self._zones)
+                annotated_frame = draw_detections(frame, detections, ppe_statuses, persistent_warnings, self._zones, face_recognitions)
                 
                 # Encode and Broadcast
                 if self.ws_manager and self.ws_manager.active_connections_count > 0:
@@ -137,6 +149,7 @@ class DetectionService:
                         detections=detections,
                         ppe_statuses=ppe_statuses,
                         obstacle_warnings=persistent_warnings,
+                        face_recognitions=face_recognitions,
                         fps=self._status.fps,
                         latency_ms=inference_time,
                         worker_count=len(ppe_statuses),
