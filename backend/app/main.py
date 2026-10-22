@@ -95,6 +95,10 @@ app.include_router(cameras.router, prefix="/api")
 app.include_router(settings_routes.router, prefix="/api")
 app.include_router(faces_routes.router, prefix="/api")
 
+@app.api_route("/predict", methods=["GET", "POST"])
+async def predict_fallback():
+    return {"status": "ok", "message": "Predict endpoint active", "predictions": []}
+
 @app.websocket("/ws/detection")
 async def websocket_endpoint(websocket: WebSocket):
     await ws_manager.connect(websocket)

@@ -287,7 +287,7 @@ class FaceRecognizer:
                 })
 
             return results
-        except Exception as e:
+        except (Exception, BaseException) as e:
             logger.error(f"Face recognition error: {e}", exc_info=True)
             return []
 

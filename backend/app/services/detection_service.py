@@ -139,7 +139,7 @@ class DetectionService:
                                 FaceRecognitionResult(**fr) for fr in face_recognitions_raw
                             ]
                             face_recognitions = self._cached_face_recognitions
-                        except Exception as e:
+                        except (Exception, BaseException) as e:
                             logger.error(f"Error in face recognition: {e}")
                     self._face_frame_counter += 1
                 else:
