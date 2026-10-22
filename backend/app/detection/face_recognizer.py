@@ -29,6 +29,7 @@ class FaceRecognizer:
         self._persons: list[dict] = []   # list of {id, name, image_paths, encodings}
         self._all_encodings: list       = []  # flat list of np.ndarray
         self._all_names: list[str]      = []  # parallel name list
+        self._thumbnails_by_name: dict[str, str] = {}  # cache name -> base64 trained thumbnail
         self._loaded = False
 
         FACE_DATA_DIR.mkdir(exist_ok=True)
@@ -52,10 +53,15 @@ class FaceRecognizer:
     def _rebuild_flat_lists(self):
         self._all_encodings = []
         self._all_names = []
+        self._thumbnails_by_name = {}
         for person in self._persons:
+            name = person["name"]
+            thumb = self.get_person_thumbnail(person["id"])
+            if thumb:
+                self._thumbnails_by_name[name] = thumb
             for enc in person.get("encodings", []):
                 self._all_encodings.append(enc)
-                self._all_names.append(person["name"])
+                self._all_names.append(name)
 
     def _save_encodings(self):
         # Detach encodings from persons before saving (convert to list for pickle safety)
@@ -209,8 +215,8 @@ class FaceRecognizer:
 
     def recognize_faces(self, frame_bgr: np.ndarray) -> list[dict]:
         """
-        Detect and recognize all faces in a frame.
-        Returns list of {name, confidence, bbox: [x1,y1,x2,y2], face_crop_b64: str}
+        Detect and recognize all faces in a frame with high-speed downscaling.
+        Returns list of {name, confidence, bbox: [x1,y1,x2,y2], face_crop_b64: str, trained_thumbnail_b64: str}
         """
         if not self._all_encodings or frame_bgr is None:
             return []
@@ -219,9 +225,14 @@ class FaceRecognizer:
             import face_recognition
             import cv2
 
-            # Resize for faster processing (1/2 scale)
+            # Resize to target width 320 for rapid 10x-faster HOG detection
             h, w = frame_bgr.shape[:2]
-            small = cv2.resize(frame_bgr, (w // 2, h // 2))
+            target_w = 320.0
+            scale = target_w / float(w) if w > target_w else 1.0
+            if scale < 1.0:
+                small = cv2.resize(frame_bgr, (int(w * scale), int(h * scale)))
+            else:
+                small = frame_bgr
             rgb_small = cv2.cvtColor(small, cv2.COLOR_BGR2RGB)
 
             face_locs = face_recognition.face_locations(rgb_small, model="hog")
@@ -229,11 +240,15 @@ class FaceRecognizer:
                 return []
 
             face_encs = face_recognition.face_encodings(rgb_small, face_locs)
+            inv_scale = 1.0 / scale
 
             results = []
             for (top, right, bottom, left), enc in zip(face_locs, face_encs):
-                # Scale back to original
-                top2, right2, bottom2, left2 = top*2, right*2, bottom*2, left*2
+                # Scale back to original frame coordinates
+                top_orig = int(round(top * inv_scale))
+                right_orig = int(round(right * inv_scale))
+                bottom_orig = int(round(bottom * inv_scale))
+                left_orig = int(round(left * inv_scale))
 
                 # Compute distances against all stored encodings
                 distances = face_recognition.face_distance(self._all_encodings, enc)
@@ -243,29 +258,32 @@ class FaceRecognizer:
                 if best_dist <= self.tolerance:
                     name = self._all_names[best_idx]
                     confidence = max(0.0, 1.0 - best_dist)
+                    trained_thumb = self._thumbnails_by_name.get(name, "")
                 else:
                     name = "Unknown"
                     confidence = 0.0
+                    trained_thumb = ""
 
-                # Crop face from original frame
+                # Optional tight face crop from live frame
                 pad = 10
-                fy1 = max(0, top2 - pad)
-                fy2 = min(h, bottom2 + pad)
-                fx1 = max(0, left2 - pad)
-                fx2 = min(w, right2 + pad)
+                fy1 = max(0, top_orig - pad)
+                fy2 = min(h, bottom_orig + pad)
+                fx1 = max(0, left_orig - pad)
+                fx2 = min(w, right_orig + pad)
                 face_crop = frame_bgr[fy1:fy2, fx1:fx2]
 
                 # Encode crop to base64
                 face_b64 = ""
                 if face_crop.size > 0:
-                    _, buf = cv2.imencode(".jpg", face_crop, [cv2.IMWRITE_JPEG_QUALITY, 80])
+                    _, buf = cv2.imencode(".jpg", face_crop, [cv2.IMWRITE_JPEG_QUALITY, 75])
                     face_b64 = base64.b64encode(buf).decode("utf-8")
 
                 results.append({
                     "name": name,
                     "confidence": round(confidence, 3),
-                    "bbox": [left2, top2, right2, bottom2],
+                    "bbox": [left_orig, top_orig, right_orig, bottom_orig],
                     "face_crop_b64": face_b64,
+                    "trained_thumbnail_b64": trained_thumb,
                 })
 
             return results

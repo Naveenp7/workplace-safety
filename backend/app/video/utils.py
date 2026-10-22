@@ -22,6 +22,7 @@ def draw_detections(
     obstacle_warnings: List[ObstacleWarning],
     zones: List[SafetyZone],
     face_recognitions: Optional[List[FaceRecognitionResult]] = None,
+    include_boxes: bool = True,
 ) -> np.ndarray:
     """Draw bounding boxes, labels, and zones on the frame."""
     out_frame = frame.copy()
@@ -55,6 +56,10 @@ def draw_detections(
                         cv2.FONT_HERSHEY_SIMPLEX, 0.55, BLUE, 2)
         except Exception:
             pass
+
+    # If boxes should not be drawn into the bitmap (e.g. for live streaming where frontend canvas renders them)
+    if not include_boxes:
+        return out_frame
 
     # Draw individual gear items (Helmets in Cyan)
     for d in detections:

@@ -29,6 +29,7 @@ export interface FaceRecognitionResult {
   confidence: number;
   bbox: number[]; // [x1, y1, x2, y2]
   face_crop_b64: string;
+  trained_thumbnail_b64?: string;
 }
 
 export interface DetectionFrame {

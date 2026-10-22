@@ -183,30 +183,6 @@ export function VideoCanvas({ frame, isActive = true }: VideoCanvasProps) {
 
           ctx.fillStyle = '#ffffff';
           ctx.fillText(label, rect.x + 5, Math.max(labelY, 0) + 13);
-
-          // Draw face crop thumbnail if available (48x48 in top-right corner of box)
-          if (face.face_crop_b64) {
-            const thumbSize = 48;
-            const thumbImg = new Image();
-            thumbImg.onload = () => {
-              ctx.save();
-              // Rounded clip for thumbnail
-              const tx = rect.x + rect.w - thumbSize - 4;
-              const ty = rect.y + 4;
-              ctx.beginPath();
-              ctx.roundRect(tx, ty, thumbSize, thumbSize, 4);
-              ctx.clip();
-              ctx.drawImage(thumbImg, tx, ty, thumbSize, thumbSize);
-              ctx.restore();
-              // Violet border around thumbnail
-              ctx.strokeStyle = VIOLET;
-              ctx.lineWidth = 1.5;
-              ctx.beginPath();
-              ctx.roundRect(tx, ty, thumbSize, thumbSize, 4);
-              ctx.stroke();
-            };
-            thumbImg.src = `data:image/jpeg;base64,${face.face_crop_b64}`;
-          }
         });
       }
     };

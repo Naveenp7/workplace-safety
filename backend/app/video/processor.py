@@ -41,13 +41,23 @@ class VideoProcessor:
         # source can be string (file/rtsp) or int (webcam)
         src = int(self.source) if (isinstance(self.source, str) and self.source.isdigit()) else self.source
         if isinstance(src, int):
+            cap = None
             try:
                 cap = cv2.VideoCapture(src, cv2.CAP_DSHOW)
-                if cap.isOpened():
-                    return cap
+                if not cap.isOpened():
+                    cap = None
             except Exception:
-                pass
-            return cv2.VideoCapture(src)
+                cap = None
+            if cap is None:
+                cap = cv2.VideoCapture(src)
+
+            if cap.isOpened():
+                # Crucial for low latency on Windows: discard queued buffered frames
+                cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                # Standardize resolution to 640x480 for fast capture and minimal USB bus overhead
+                cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+            return cap
         return cv2.VideoCapture(self.source)
 
     async def stop(self) -> None:

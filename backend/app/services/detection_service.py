@@ -39,6 +39,10 @@ class DetectionService:
         self._zones = []
         self._camera_id = None
         
+        # Face recognition frame skipping & caching
+        self._face_frame_counter = 0
+        self._cached_face_recognitions: List[FaceRecognitionResult] = []
+        
         # Dependencies injected later
         self.event_service = None
         self.ws_manager = None
@@ -57,6 +61,8 @@ class DetectionService:
             
         self._camera_id = camera_id
         self._zones = zones
+        self._face_frame_counter = 0
+        self._cached_face_recognitions = []
         
         self.processor = VideoProcessor(
             source=source,
@@ -123,22 +129,36 @@ class DetectionService:
                 persistent_warnings = self.tracker.get_persistent_obstacles(raw_warnings)
                 self.tracker.cleanup_stale()
                 
-                # Event Generation (async)
-                if self.event_service and self.db_session_maker:
-                    asyncio.create_task(self._generate_events(ppe_statuses, persistent_warnings, frame))
-                
-                # Face Recognition
-                face_recognitions_raw = []
+                # Face Recognition: Run every 3rd frame to conserve CPU; reuse cache on intervening frames
+                face_recognitions = self._cached_face_recognitions
                 if self.face_recognizer and self.face_recognizer.is_trained:
-                    face_recognitions_raw = self.face_recognizer.recognize_faces(frame)
+                    if self._face_frame_counter % 3 == 0:
+                        try:
+                            face_recognitions_raw = self.face_recognizer.recognize_faces(frame)
+                            self._cached_face_recognitions = [
+                                FaceRecognitionResult(**fr) for fr in face_recognitions_raw
+                            ]
+                            face_recognitions = self._cached_face_recognitions
+                        except Exception as e:
+                            logger.error(f"Error in face recognition: {e}")
+                    self._face_frame_counter += 1
+                else:
+                    face_recognitions = []
 
-                # Convert raw face dicts to schema objects
-                face_recognitions = [
-                    FaceRecognitionResult(**fr) for fr in face_recognitions_raw
-                ]
+                # Event Generation (async) with boxes stamped on snapshot frame for incident records
+                if self.event_service and self.db_session_maker:
+                    snapshot_frame = draw_detections(
+                        frame, detections, ppe_statuses, persistent_warnings, self._zones, face_recognitions, include_boxes=True
+                    )
+                    asyncio.create_task(self._generate_events(ppe_statuses, persistent_warnings, snapshot_frame))
 
-                # Annotate Frame
-                annotated_frame = draw_detections(frame, detections, ppe_statuses, persistent_warnings, self._zones, face_recognitions)
+                # Annotate Frame for Live WebSocket Stream
+                # Notice include_boxes=False: only translucent safety zones are drawn into bitmap.
+                # The frontend VideoCanvas component renders smooth hardware-accelerated vector boxes & badges,
+                # eliminating text blur and duplicate label overlays!
+                annotated_frame = draw_detections(
+                    frame, detections, ppe_statuses, persistent_warnings, self._zones, face_recognitions, include_boxes=False
+                )
                 
                 # Encode and Broadcast
                 if self.ws_manager and self.ws_manager.active_connections_count > 0:

@@ -31,6 +31,7 @@ class FaceRecognitionResult(BaseModel):
     confidence: float
     bbox: List[float]  # [x1, y1, x2, y2]
     face_crop_b64: str = ""
+    trained_thumbnail_b64: str = ""
 
 class DetectionFrame(BaseModel):
     frame_base64: str

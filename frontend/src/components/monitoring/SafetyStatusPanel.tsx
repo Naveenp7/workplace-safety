@@ -89,11 +89,11 @@ export function SafetyStatusPanel({ frame }: { frame: DetectionFrame | null }) {
             {faceRecognitions.filter(f => f.name !== 'Unknown').map((face, idx) => (
               <div key={idx} className="p-3 bg-violet-50 rounded-lg border border-violet-100 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  {face.face_crop_b64 && (
+                  {(face.trained_thumbnail_b64 || face.face_crop_b64) && (
                     <img
-                      src={`data:image/jpeg;base64,${face.face_crop_b64}`}
+                      src={`data:image/jpeg;base64,${face.trained_thumbnail_b64 || face.face_crop_b64}`}
                       alt={face.name}
-                      className="w-9 h-9 rounded-full object-cover border-2 border-violet-300"
+                      className="w-10 h-10 rounded-full object-cover border-2 border-violet-400 shadow-sm shrink-0"
                     />
                   )}
                   <span className="text-sm font-medium text-violet-900">{face.name}</span>

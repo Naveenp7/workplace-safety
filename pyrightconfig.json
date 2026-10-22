@@ -1,0 +1,8 @@
+{
+  "include": ["backend"],
+  "extraPaths": [
+    "c:\\GUIDO\\workplace-safety\\backend",
+    "c:\\GUIDO\\workplace-safety\\venv\\Lib\\site-packages",
+    "C:\\Users\\navee\\AppData\\Roaming\\Python\\Python311\\site-packages"
+  ]
+}
