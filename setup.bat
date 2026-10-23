@@ -32,38 +32,43 @@ if not exist "venv" (
 
 call venv\Scripts\activate.bat
 
-:: Install dlib separately first (prebuilt binary - no C++ compiler needed)
+:: Install dlib first (pinned to version with full Windows prebuilt wheels)
 echo.
 echo [Step 1/3] Installing dlib (face detection library)...
-pip install dlib --only-binary=:all: --quiet 2>nul
+pip install dlib==19.24.2 --quiet
 
 if errorlevel 1 (
     echo.
-    echo [WARNING] Could not install prebuilt dlib.
-    echo Trying alternative method...
+    echo ============================================
+    echo   DLIB INSTALL FAILED - ACTION REQUIRED
+    echo ============================================
     echo.
-    pip install dlib --quiet 2>nul
-    if errorlevel 1 (
-        echo.
-        echo ============================================
-        echo   DLIB INSTALL FAILED - ACTION REQUIRED
-        echo ============================================
-        echo.
-        echo dlib needs "Visual Studio C++ Build Tools" to compile.
-        echo.
-        echo Steps to fix:
-        echo   1. Go to: https://visualstudio.microsoft.com/visual-cpp-build-tools/
-        echo   2. Download and run "vs_buildtools.exe"
-        echo   3. In the installer, select "Desktop development with C++"
-        echo   4. Click Install (it may take 5-10 minutes)
-        echo   5. Restart your computer
-        echo   6. Run setup.bat again
-        echo.
-        pause
-        exit /b 1
-    )
+    echo dlib needs "Visual Studio C++ Build Tools" to compile.
+    echo.
+    echo Steps to fix:
+    echo   1. Go to: https://visualstudio.microsoft.com/visual-cpp-build-tools/
+    echo   2. Download and run "vs_buildtools.exe"
+    echo   3. In the installer, select "Desktop development with C++"
+    echo   4. Click Install ^(it may take 5-10 minutes^)
+    echo   5. Restart your computer
+    echo   6. Run setup.bat again
+    echo.
+    pause
+    exit /b 1
 )
-echo [OK] dlib installed.
+
+:: Verify dlib works properly with face_recognition
+echo Verifying dlib installation...
+python -c "import dlib; assert hasattr(dlib, 'face_recognition_model_v1'), 'dlib missing face recognition features'" 2>nul
+if errorlevel 1 (
+    echo.
+    echo [ERROR] dlib installed but is missing face recognition features.
+    echo Reinstalling correct version...
+    pip uninstall dlib -y --quiet
+    pip install dlib==19.24.2 --quiet
+)
+
+echo [OK] dlib installed and verified.
 
 :: Install remaining packages
 echo.
